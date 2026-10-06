@@ -5,14 +5,14 @@
             @csrf
             @method('DELETE')
             <div class="modal-header">
-                <h2 class="modal-title fs-5" id="appConfirmDeleteTitle">Confirm delete</h2>
+                <h2 class="modal-title fs-5" id="appConfirmDeleteTitle"><i class="bi bi-exclamation-triangle-fill text-danger me-2"></i>Confirm delete</h2>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close dialog"></button>
             </div>
             <div class="modal-body">
                 <p class="mb-0" id="appConfirmDeleteBody"></p>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
                 <button type="submit" class="btn btn-danger" id="appConfirmDeleteSubmit">Delete</button>
             </div>
         </form>

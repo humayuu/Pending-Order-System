@@ -5,27 +5,25 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>@yield('title', config('app.name'))</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet"
           integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
-    <style>
-        #toast-host { max-width: min(22rem, calc(100vw - 1rem)); }
-        @media (max-width: 575.98px) {
-            #toast-host { left: 0.5rem !important; right: 0.5rem !important; max-width: none; width: auto !important; }
-            #toast-host .toast { width: 100%; }
-        }
-    </style>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+    <link href="{{ asset('css/admin.css') }}" rel="stylesheet">
 </head>
-<body class="bg-light d-flex flex-column min-vh-100">
+<body>
 <a class="visually-hidden-focusable btn btn-sm btn-primary position-fixed top-0 start-0 m-2" style="z-index: 1100" href="#main-content-guest">Skip to main content</a>
 
-<nav class="navbar navbar-dark bg-primary" aria-label="Application header">
-    <div class="container">
-        <span class="navbar-brand mb-0 h1 fs-5">{{ config('app.name') }}</span>
+<main id="main-content-guest" class="auth-wrap" tabindex="-1" role="main">
+    <div class="auth-card">
+        <div class="text-center mb-4">
+            <span class="brand-mark mb-2" style="width:3rem;height:3rem;font-size:1.5rem"><i class="bi bi-box-seam"></i></span>
+            <div class="fw-bold fs-5">{{ config('app.name') }}</div>
+        </div>
+        @yield('content')
     </div>
-</nav>
-
-<main id="main-content-guest" class="container px-3 px-sm-4 py-4 py-md-5 flex-grow-1" tabindex="-1" role="main">
-    @yield('content')
 </main>
 
 @include('partials.toast-host')

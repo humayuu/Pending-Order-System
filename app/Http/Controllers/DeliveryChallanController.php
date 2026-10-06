@@ -5,7 +5,9 @@ namespace App\Http\Controllers;
 use App\Models\Client;
 use App\Models\DeliveryChallan;
 use App\Models\DeliveryChallanLine;
+use App\Models\Order;
 use App\Models\OrderItem;
+use App\Support\StockFilters;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
@@ -15,15 +17,23 @@ use Illuminate\View\View;
 
 class DeliveryChallanController extends Controller
 {
-    public function index(): View
+    public function index(Request $request): View
     {
+        $filters = StockFilters::fromRequest($request);
+
         $challans = DeliveryChallan::query()
             ->with('client')
             ->withSum('lines as total_qty', 'quantity')
+            ->when($filters->clientId, fn ($q) => $q->where('client_id', $filters->clientId))
+            ->when($filters->from, fn ($q) => $q->whereDate('issued_on', '>=', $filters->from->toDateString()))
+            ->when($filters->to, fn ($q) => $q->whereDate('issued_on', '<=', $filters->to->toDateString()))
             ->latest()
-            ->paginate(15);
+            ->paginate(15)
+            ->withQueryString();
 
-        return view('challans.index', compact('challans'));
+        $clients = Client::query()->orderBy('name')->get(['id', 'name']);
+
+        return view('challans.index', compact('challans', 'clients', 'filters'));
     }
 
     public function create(): View
@@ -32,6 +42,7 @@ class DeliveryChallanController extends Controller
 
         $availableLines = OrderItem::query()
             ->with(['order'])
+            ->whereHas('order', fn ($q) => $q->whereNotNull('client_id'))
             ->withSum('deliveryChallanLines as delivered_sum', 'quantity')
             ->orderBy('item_name')
             ->get()
@@ -45,13 +56,16 @@ class DeliveryChallanController extends Controller
                     'po_number' => $item->po_number,
                     'pending' => $pending,
                     'order_id' => $item->order_id,
+                    'client_id' => $item->order->client_id,
                     'line_notes' => $item->notes ? Str::limit($item->notes, 50) : null,
                 ];
             })
             ->filter(fn (array $row) => $row['pending'] > 0)
             ->values();
 
-        return view('challans.create', compact('clients', 'availableLines'));
+        $unassignedCount = Order::query()->unassigned()->count();
+
+        return view('challans.create', compact('clients', 'availableLines', 'unassignedCount'));
     }
 
     public function store(Request $request): RedirectResponse
@@ -78,6 +92,7 @@ class DeliveryChallanController extends Controller
                 $sortedIds = $ids->unique()->sort()->values()->all();
 
                 $items = OrderItem::query()
+                    ->with('order')
                     ->whereIn('id', $sortedIds)
                     ->orderBy('id')
                     ->lockForUpdate()
@@ -92,6 +107,12 @@ class DeliveryChallanController extends Controller
                     $item = $items->get($line['order_item_id']);
                     if (! $item) {
                         throw new \RuntimeException('Invalid stock line selected.');
+                    }
+
+                    if ((int) $item->order->client_id !== (int) $validated['client_id']) {
+                        throw new \RuntimeException(
+                            "PO {$item->po_number} ({$item->item_name}) does not belong to the selected client."
+                        );
                     }
 
                     $delivered = (int) DeliveryChallanLine::query()

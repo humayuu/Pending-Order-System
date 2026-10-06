@@ -2,8 +2,11 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Client;
+use App\Models\DeliveryChallan;
 use App\Models\Order;
 use App\Models\OrderItem;
+use App\Support\StockFilters;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -11,24 +14,38 @@ use Illuminate\View\View;
 
 class OrderController extends Controller
 {
-    public function index(): View
+    public function index(Request $request): View
     {
-        $orders = Order::query()
-            ->withCount('items')
-            ->latest()
-            ->paginate(15);
+        $filters = StockFilters::fromRequest($request);
 
-        return view('orders.index', compact('orders'));
+        $orders = Order::query()
+            ->with('client')
+            ->withCount('items')
+            ->when($filters->unassigned, fn ($q) => $q->unassigned())
+            ->when($filters->clientId, fn ($q) => $q->forClient($filters->clientId))
+            ->when($filters->from, fn ($q) => $q->where('created_at', '>=', $filters->from->copy()->startOfDay()))
+            ->when($filters->to, fn ($q) => $q->where('created_at', '<=', $filters->to->copy()->endOfDay()))
+            ->latest()
+            ->paginate(15)
+            ->withQueryString();
+
+        $clients = Client::query()->orderBy('name')->get(['id', 'name']);
+
+        return view('orders.index', compact('orders', 'clients', 'filters'));
     }
 
-    public function create(): View
+    public function create(Request $request): View
     {
-        return view('orders.create');
+        $clients = Client::query()->orderBy('name')->get(['id', 'name']);
+        $selectedClient = $request->query('client_id');
+
+        return view('orders.create', compact('clients', 'selectedClient'));
     }
 
     public function store(Request $request): RedirectResponse
     {
         $validated = $request->validate([
+            'client_id' => ['required', 'exists:clients,id'],
             'lines' => ['required', 'array', 'min:1'],
             'lines.*.po_number' => ['required', 'string', 'max:255'],
             'lines.*.notes' => ['nullable', 'string'],
@@ -39,6 +56,7 @@ class OrderController extends Controller
 
         DB::transaction(function () use ($validated, $request): void {
             $order = Order::query()->create([
+                'client_id' => $validated['client_id'],
                 'reference' => null,
                 'notes' => null,
             ]);
@@ -65,10 +83,43 @@ class OrderController extends Controller
 
     public function show(Order $order): View
     {
-        $order->load(['items' => function ($q) {
+        $order->load(['client', 'items' => function ($q) {
             $q->withSum('deliveryChallanLines as delivered_sum', 'quantity');
         }]);
 
         return view('orders.show', compact('order'));
+    }
+
+    public function edit(Order $order): View
+    {
+        $clients = Client::query()->orderBy('name')->get(['id', 'name']);
+
+        return view('orders.edit', compact('order', 'clients'));
+    }
+
+    public function update(Request $request, Order $order): RedirectResponse
+    {
+        $validated = $request->validate([
+            'client_id' => ['required', 'exists:clients,id'],
+            'reference' => ['nullable', 'string', 'max:255'],
+            'notes' => ['nullable', 'string'],
+        ]);
+
+        if ((int) $validated['client_id'] !== (int) $order->client_id) {
+            $deliveredToOthers = DeliveryChallan::query()
+                ->where('client_id', '!=', $validated['client_id'])
+                ->whereHas('lines.orderItem', fn ($q) => $q->where('order_id', $order->id))
+                ->exists();
+
+            if ($deliveredToOthers) {
+                return back()->withInput()->withErrors([
+                    'client_id' => 'Cannot change the client: challans for another client already deliver against this order.',
+                ]);
+            }
+        }
+
+        $order->update($validated);
+
+        return redirect()->route('orders.show', $order)->with('status', 'Order updated.');
     }
 }

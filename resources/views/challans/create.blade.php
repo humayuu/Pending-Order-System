@@ -3,18 +3,22 @@
 @section('title', 'New delivery challan')
 
 @section('content')
-<h1 class="h3 mb-2">New delivery challan</h1>
-<p class="text-muted mb-4 small lh-base">Choose the client, then add lines. For each line, pick the PO stock row and quantity (only pending quantity is allowed).</p>
+<x-page-header title="New delivery challan" subtitle="Choose the client, then add lines. Only pending quantity can be dispatched." />
+
+@if ($unassignedCount > 0)
+    <div class="alert alert-info">{{ $unassignedCount }} order(s) have no client and are hidden here. <a href="{{ route('orders.index', ['client_id' => 'unassigned']) }}">Assign a client</a> to dispatch them.</div>
+@endif
 
 @if ($clients->isEmpty())
     <div class="alert alert-warning">Add at least one <a href="{{ route('clients.create') }}">client</a> before creating a challan.</div>
 @endif
 
-<div class="card shadow-sm">
-    <div class="card-body">
-        <form method="post" action="{{ route('challans.store') }}" id="challanForm">
-            @csrf
-            <div class="row g-3 mb-3">
+<form method="post" action="{{ route('challans.store') }}" id="challanForm">
+    @csrf
+    <div class="card form-card mb-4">
+        <div class="card-header">Challan details</div>
+        <div class="card-body">
+            <div class="row g-3">
                 <div class="col-12 col-lg-6">
                     <label class="form-label" for="client_id">Client</label>
                     <select name="client_id" id="client_id" class="form-select" required>
@@ -33,25 +37,28 @@
                     <label class="form-label" for="vehicle_no">Vehicle no. (optional)</label>
                     <input type="text" name="vehicle_no" id="vehicle_no" class="form-control" value="{{ old('vehicle_no') }}">
                 </div>
+                <div class="col-12">
+                    <label class="form-label" for="remarks">Remarks (optional)</label>
+                    <textarea name="remarks" id="remarks" class="form-control" rows="2">{{ old('remarks') }}</textarea>
+                </div>
             </div>
-            <div class="mb-3">
-                <label class="form-label" for="remarks">Remarks (optional)</label>
-                <textarea name="remarks" id="remarks" class="form-control" rows="2">{{ old('remarks') }}</textarea>
-            </div>
-
-            <div class="d-flex flex-column flex-sm-row justify-content-between align-items-stretch align-items-sm-center gap-2 mb-2">
-                <span class="fw-semibold">Dispatch lines</span>
-                <button type="button" class="btn btn-sm btn-outline-primary align-self-stretch align-self-sm-auto" id="addChallanLine" aria-label="Add another dispatch line">Add line</button>
-            </div>
-            <div id="challanLines"></div>
-
-            <div class="d-flex flex-column flex-sm-row gap-2 mt-3">
-                <button type="submit" class="btn btn-primary">Create challan</button>
-                <a href="{{ route('challans.index') }}" class="btn btn-outline-secondary">Cancel</a>
-            </div>
-        </form>
+        </div>
     </div>
-</div>
+
+    <div class="card form-card">
+        <div class="card-header">
+            <span>Dispatch lines</span>
+            <button type="button" class="btn btn-sm btn-outline-primary" id="addChallanLine" aria-label="Add another dispatch line"><i class="bi bi-plus-lg"></i>Add line</button>
+        </div>
+        <div class="card-body">
+            <div id="challanLines"></div>
+        </div>
+        <div class="card-footer d-flex flex-column flex-sm-row gap-2">
+            <button type="submit" class="btn btn-primary">Create challan</button>
+            <a href="{{ route('challans.index') }}" class="btn btn-outline-secondary">Cancel</a>
+        </div>
+    </div>
+</form>
 @endsection
 
 @push('scripts')
@@ -61,9 +68,16 @@
     const container = document.getElementById('challanLines');
     const addBtn = document.getElementById('addChallanLine');
 
+    const clientSelect = document.getElementById('client_id');
+
+    function currentLines() {
+        const cid = clientSelect.value;
+        return cid ? available.filter(function (row) { return String(row.client_id) === cid; }) : [];
+    }
+
     function optionsHtml() {
         let html = '<option value="">Select PO line…</option>';
-        available.forEach(function (row) {
+        currentLines().forEach(function (row) {
             let label = 'PO ' + row.po_number + ' — ' + row.item_name;
             if (row.line_notes) {
                 label += ' — ' + row.line_notes;
@@ -76,7 +90,7 @@
 
     function rowTemplate(index) {
         return `
-        <div class="border rounded p-3 mb-3 challan-line-row" data-index="${index}">
+        <div class="line-card challan-line-row" data-index="${index}">
             <div class="row g-2 align-items-end">
                 <div class="col-12 col-lg-8">
                     <label class="form-label">PO / item line</label>
@@ -205,12 +219,24 @@
         });
     }
 
-    if (!available.length) {
-        container.innerHTML = '<p class="text-warning">No pending stock lines. Add an order first.</p>';
-        addBtn.disabled = true;
-    } else {
-        addRow();
+    function resetRows() {
+        container.innerHTML = '';
+        nextIndex = 0;
+        const lines = currentLines();
+        if (!clientSelect.value) {
+            container.innerHTML = '<p class="text-muted mb-0">Select a client to see their pending PO lines.</p>';
+            addBtn.disabled = true;
+        } else if (!lines.length) {
+            container.innerHTML = '<p class="text-warning mb-0">This client has no pending PO lines.</p>';
+            addBtn.disabled = true;
+        } else {
+            addBtn.disabled = false;
+            addRow();
+        }
     }
+
+    clientSelect.addEventListener('change', resetRows);
+    resetRows();
 })();
 </script>
 @endpush

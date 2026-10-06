@@ -3,28 +3,39 @@
 @section('title', 'New order')
 
 @section('content')
-<h1 class="h3 mb-2">New order</h1>
-<p class="text-muted mb-4 small lh-base">Each line: <strong>PO number</strong>, <strong>item name</strong>, <strong>quantity</strong>, optional <strong>notes</strong>, then optional <strong>PO PDF</strong> last.</p>
+<x-page-header title="New order" subtitle="Each line: PO number, item name, quantity, optional notes, then optional PO PDF last." />
 
-<div class="card shadow-sm">
-    <div class="card-body">
-        <form method="post" action="{{ route('orders.store') }}" enctype="multipart/form-data" id="orderForm">
-            @csrf
-
-            <div class="d-flex flex-column flex-sm-row justify-content-between align-items-stretch align-items-sm-center gap-2 mb-2">
-                <span class="fw-semibold">Lines</span>
-                <button type="button" class="btn btn-sm btn-outline-primary align-self-stretch align-self-sm-auto" id="addLine" aria-label="Add another order line">Add line</button>
-            </div>
-
-            <div id="linesContainer"></div>
-
-            <div class="d-flex flex-column flex-sm-row gap-2 mt-3">
-                <button type="submit" class="btn btn-primary">Save order</button>
-                <a href="{{ route('orders.index') }}" class="btn btn-outline-secondary">Cancel</a>
-            </div>
-        </form>
+<form method="post" action="{{ route('orders.store') }}" enctype="multipart/form-data" id="orderForm">
+    @csrf
+    @if ($clients->isEmpty())
+        <div class="alert alert-warning">Add at least one <a href="{{ route('clients.create') }}">client</a> before creating an order.</div>
+    @endif
+    <div class="card form-card mb-4">
+        <div class="card-header">Client</div>
+        <div class="card-body">
+            <label class="form-label" for="client_id">Client this PO belongs to</label>
+            <select name="client_id" id="client_id" class="form-select @error('client_id') is-invalid @enderror" required>
+                <option value="">Select client…</option>
+                @foreach ($clients as $client)
+                    <option value="{{ $client->id }}" @selected(old('client_id', $selectedClient) == $client->id)>{{ $client->name }}</option>
+                @endforeach
+            </select>
+        </div>
     </div>
-</div>
+    <div class="card form-card">
+        <div class="card-header">
+            <span>Lines</span>
+            <button type="button" class="btn btn-sm btn-outline-primary" id="addLine" aria-label="Add another order line"><i class="bi bi-plus-lg"></i>Add line</button>
+        </div>
+        <div class="card-body">
+            <div id="linesContainer"></div>
+        </div>
+        <div class="card-footer d-flex flex-column flex-sm-row gap-2">
+            <button type="submit" class="btn btn-primary">Save order</button>
+            <a href="{{ route('orders.index') }}" class="btn btn-outline-secondary">Cancel</a>
+        </div>
+    </div>
+</form>
 @endsection
 
 @push('scripts')
@@ -35,7 +46,7 @@
 
     function lineTemplate(index) {
         return `
-        <div class="border rounded p-3 mb-3 line-row" data-index="${index}">
+        <div class="line-card line-row" data-index="${index}">
             <div class="row g-2">
                 <div class="col-12 col-md-6 col-xl-4">
                     <label class="form-label">PO number</label>

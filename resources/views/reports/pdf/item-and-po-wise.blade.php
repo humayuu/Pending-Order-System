@@ -1,28 +1,33 @@
 @extends('reports.pdf.layout')
 
 @section('pdf_body')
-    <table>
-        <thead>
-        <tr>
-            <th>PO number</th>
-            <th>Item</th>
-            <th class="num">Ordered</th>
-            <th class="num">Delivered</th>
-            <th class="num">Pending</th>
-        </tr>
-        </thead>
-        <tbody>
-        @forelse ($rows as $row)
-            <tr>
-                <td>{{ $row->po_number }}</td>
-                <td>{{ $row->item_name }}</td>
-                <td class="num">{{ $row->total_ordered }}</td>
-                <td class="num">{{ $row->total_delivered }}</td>
-                <td class="num">{{ $row->pending }}</td>
-            </tr>
-        @empty
-            <tr><td colspan="5" class="muted">No data.</td></tr>
-        @endforelse
-        </tbody>
-    </table>
+    @forelse ($blocks as $block)
+        <div class="block">
+            <h2>{{ $block->client_name }}</h2>
+            <table>
+                <thead>
+                <tr>
+                    <th>Product name</th>
+                    @foreach ($block->pos as $po)
+                        <th class="num">{{ $po }}</th>
+                    @endforeach
+                    <th class="num">Total</th>
+                </tr>
+                </thead>
+                <tbody>
+                @foreach ($block->items as $item)
+                    <tr>
+                        <td>{{ $item->item_name }}</td>
+                        @foreach ($block->pos as $po)
+                            <td class="num">{{ $item->cells->has($po) ? number_format($item->cells[$po]) : '' }}</td>
+                        @endforeach
+                        <td class="num">{{ number_format($item->total) }}</td>
+                    </tr>
+                @endforeach
+                </tbody>
+            </table>
+        </div>
+    @empty
+        <p class="muted">No data.</p>
+    @endforelse
 @endsection

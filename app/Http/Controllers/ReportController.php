@@ -2,111 +2,64 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Client;
+use App\Models\Order;
+use App\Services\PendingStockService;
+use App\Support\StockFilters;
 use Barryvdh\DomPDF\Facade\Pdf;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Illuminate\Http\Response;
-use Illuminate\Support\Collection;
-use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
 
 class ReportController extends Controller
 {
-    public function index(): View
+    public function __construct(protected PendingStockService $stock) {}
+
+    public function index(): RedirectResponse
     {
-        return view('reports.index');
+        return redirect()->route('reports.item-and-po-wise');
     }
 
-    public function itemWise(): View
+    public function itemAndPoWise(Request $request): View
     {
-        return view('reports.item-wise', ['rows' => $this->itemWiseRows()]);
+        $filters = StockFilters::fromRequest($request);
+
+        return view('reports.item-and-po-wise', ['blocks' => $this->stock->itemPoMatrix($filters)] + $this->filterData($filters));
     }
 
-    public function itemWisePdf(): Response
+    public function itemAndPoWisePdf(Request $request): Response
     {
-        return $this->pdfResponse(
-            'reports.pdf.item-wise',
-            [
-                'rows' => $this->itemWiseRows(),
-                'pdfTitle' => 'Item wise report',
-                'generatedAt' => now()->format('Y-m-d H:i'),
-            ],
-            'item-wise-report-'.now()->format('Y-m-d').'.pdf',
-            'landscape'
-        );
-    }
+        $filters = StockFilters::fromRequest($request);
 
-    public function itemAndPoWise(): View
-    {
-        return view('reports.item-and-po-wise', ['rows' => $this->itemAndPoWiseRows()]);
-    }
-
-    public function itemAndPoWisePdf(): Response
-    {
         return $this->pdfResponse(
             'reports.pdf.item-and-po-wise',
-            [
-                'rows' => $this->itemAndPoWiseRows(),
-                'pdfTitle' => 'Item and PO wise report',
-                'generatedAt' => now()->format('Y-m-d H:i'),
-            ],
-            'item-and-po-wise-report-'.now()->format('Y-m-d').'.pdf',
-            'landscape'
+            ['blocks' => $this->stock->itemPoMatrix($filters)],
+            'Order summary (Item × PO)',
+            'item-and-po-wise-report',
+            $filters,
         );
     }
 
-    protected function itemWiseRows(): Collection
+    protected function filterData(StockFilters $filters): array
     {
-        $perLine = DB::table('order_items as oi')
-            ->select('oi.item_name')
-            ->selectRaw('oi.quantity as line_ordered')
-            ->selectRaw('(SELECT COALESCE(SUM(dcl.quantity), 0) FROM delivery_challan_lines dcl WHERE dcl.order_item_id = oi.id) as line_delivered');
-
-        return DB::query()->fromSub($perLine, 'x')
-            ->select('item_name')
-            ->selectRaw('SUM(line_ordered) as total_ordered')
-            ->selectRaw('SUM(line_delivered) as total_delivered')
-            ->groupBy('item_name')
-            ->orderBy('item_name')
-            ->get()
-            ->map(function ($row) {
-                $row->pending = max(0, (int) $row->total_ordered - (int) $row->total_delivered);
-
-                return $row;
-            })
-            ->filter(fn ($row) => $row->pending > 0)
-            ->values();
+        return [
+            'filters' => $filters,
+            'clients' => Client::query()->orderBy('name')->get(['id', 'name']),
+            'orders' => Order::query()->forClient($filters->clientId)->latest('id')->limit(200)->pluck('id'),
+        ];
     }
 
-    protected function itemAndPoWiseRows(): Collection
+    protected function pdfResponse(string $view, array $data, string $title, string $filePrefix, StockFilters $filters): Response
     {
-        $perLine = DB::table('order_items as oi')
-            ->select('oi.po_number', 'oi.item_name')
-            ->selectRaw('oi.quantity as line_ordered')
-            ->selectRaw('(SELECT COALESCE(SUM(dcl.quantity), 0) FROM delivery_challan_lines dcl WHERE dcl.order_item_id = oi.id) as line_delivered');
+        $clientName = $filters->clientId ? Client::query()->whereKey($filters->clientId)->value('name') : null;
 
-        return DB::query()->fromSub($perLine, 'x')
-            ->select('po_number', 'item_name')
-            ->selectRaw('SUM(line_ordered) as total_ordered')
-            ->selectRaw('SUM(line_delivered) as total_delivered')
-            ->groupBy('po_number', 'item_name')
-            ->orderBy('po_number')
-            ->orderBy('item_name')
-            ->get()
-            ->map(function ($row) {
-                $row->pending = max(0, (int) $row->total_ordered - (int) $row->total_delivered);
+        $pdf = Pdf::loadView($view, $data + [
+            'pdfTitle' => $title,
+            'generatedAt' => now()->format('Y-m-d H:i'),
+            'filterSummary' => $filters->describe($clientName),
+        ])->setPaper('a4', 'landscape');
 
-                return $row;
-            })
-            ->filter(fn ($row) => $row->pending > 0)
-            ->values();
-    }
-
-    /**
-     * @param  'portrait'|'landscape'  $orientation
-     */
-    protected function pdfResponse(string $view, array $data, string $filename, string $orientation = 'portrait'): Response
-    {
-        $pdf = Pdf::loadView($view, $data)->setPaper('a4', $orientation);
-
-        return $pdf->download($filename);
+        return $pdf->download($filePrefix.'-'.now()->format('Y-m-d').'.pdf');
     }
 }
