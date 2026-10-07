@@ -3,19 +3,19 @@
 @section('title', 'Log in')
 
 @section('content')
-<div class="card shadow-sm">
+<div class="card shadow">
     <div class="card-body p-4">
         <h1 class="h4 fw-bold mb-1" id="login-heading">Welcome back</h1>
-        <p class="text-muted small mb-4" id="login-desc">Sign in with your administrator email and password.</p>
+        <p class="text-body-secondary small mb-4" id="login-desc">Sign in with your administrator username and password.</p>
         <form method="post" action="{{ route('login') }}" aria-labelledby="login-heading" aria-describedby="login-desc" novalidate>
             @csrf
             <div class="mb-3">
-                <label class="form-label" for="email">Email</label>
-                <input type="email" name="email" id="email" value="{{ old('email') }}"
-                       class="form-control @error('email') is-invalid @enderror"
+                <label class="form-label" for="username">Username</label>
+                <input type="text" name="username" id="username" value="{{ old('username') }}"
+                       class="form-control @error('username') is-invalid @enderror"
                        required autofocus autocomplete="username"
                        aria-required="true"
-                       aria-invalid="{{ $errors->has('email') ? 'true' : 'false' }}">
+                       aria-invalid="{{ $errors->has('username') ? 'true' : 'false' }}">
             </div>
             <div class="mb-3">
                 <label class="form-label" for="password">Password</label>
@@ -29,7 +29,7 @@
                 <input class="form-check-input" type="checkbox" name="remember" id="remember" value="1">
                 <label class="form-check-label" for="remember">Remember me</label>
             </div>
-            <button type="submit" class="btn btn-primary w-100">Sign in</button>
+            <button type="submit" class="btn btn-primary w-100"><i class="fa-solid fa-right-to-bracket me-1" aria-hidden="true"></i>Sign in</button>
         </form>
     </div>
 </div>

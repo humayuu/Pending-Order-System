@@ -4,7 +4,7 @@
 
 @section('content')
 <x-page-header title="Edit client" subtitle="Update client details." />
-<div class="card form-card">
+<div class="card shadow-sm form-card">
     <form method="post" action="{{ route('clients.update', $client) }}">
         <div class="card-body">
             @csrf

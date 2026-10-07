@@ -2,10 +2,10 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\StoreClientRequest;
+use App\Http\Requests\UpdateClientRequest;
 use App\Models\Client;
 use Illuminate\Http\RedirectResponse;
-use Illuminate\Http\Request;
-use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
 class ClientController extends Controller
@@ -22,15 +22,9 @@ class ClientController extends Controller
         return view('clients.create');
     }
 
-    public function store(Request $request): RedirectResponse
+    public function store(StoreClientRequest $request): RedirectResponse
     {
-        $data = $request->validate([
-            'name' => ['required', 'string', 'max:255', Rule::unique('clients', 'name')],
-            'phone' => ['nullable', 'string', 'max:50'],
-            'address' => ['required', 'string'],
-        ]);
-
-        Client::query()->create($data);
+        Client::query()->create($request->validated());
 
         return redirect()->route('clients.index')->with('status', 'Client saved.');
     }
@@ -40,15 +34,9 @@ class ClientController extends Controller
         return view('clients.edit', compact('client'));
     }
 
-    public function update(Request $request, Client $client): RedirectResponse
+    public function update(UpdateClientRequest $request, Client $client): RedirectResponse
     {
-        $data = $request->validate([
-            'name' => ['required', 'string', 'max:255', Rule::unique('clients', 'name')->ignore($client->id)],
-            'phone' => ['nullable', 'string', 'max:50'],
-            'address' => ['required', 'string'],
-        ]);
-
-        $client->update($data);
+        $client->update($request->validated());
 
         return redirect()->route('clients.index')->with('status', 'Client updated.');
     }

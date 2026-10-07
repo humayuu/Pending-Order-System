@@ -15,7 +15,7 @@
 
 <form method="post" action="{{ route('challans.store') }}" id="challanForm">
     @csrf
-    <div class="card form-card mb-4">
+    <div class="card shadow-sm form-card mb-4">
         <div class="card-header">Challan details</div>
         <div class="card-body">
             <div class="row g-3">
@@ -45,10 +45,10 @@
         </div>
     </div>
 
-    <div class="card form-card">
+    <div class="card shadow-sm form-card">
         <div class="card-header">
             <span>Dispatch lines</span>
-            <button type="button" class="btn btn-sm btn-outline-primary" id="addChallanLine" aria-label="Add another dispatch line"><i class="bi bi-plus-lg"></i>Add line</button>
+            <button type="button" class="btn btn-sm btn-outline-primary" id="addChallanLine" aria-label="Add another dispatch line"><i class="fa-solid fa-plus me-1"></i>Add line</button>
         </div>
         <div class="card-body">
             <div id="challanLines"></div>
@@ -90,14 +90,14 @@
 
     function rowTemplate(index) {
         return `
-        <div class="line-card challan-line-row" data-index="${index}">
+        <div class="border rounded-3 bg-body-tertiary p-3 mb-3 challan-line-row" data-index="${index}">
             <div class="row g-2 align-items-end">
                 <div class="col-12 col-lg-8">
                     <label class="form-label">PO / item line</label>
                     <select name="lines[${index}][order_item_id]" class="form-select line-select" required>
                         ${optionsHtml()}
                     </select>
-                    <div class="form-text pending-hint text-muted small"></div>
+                    <div class="form-text pending-hint text-body-secondary small"></div>
                 </div>
                 <div class="col-12 col-sm-6 col-lg-3">
                     <label class="form-label">Quantity</label>
@@ -224,7 +224,7 @@
         nextIndex = 0;
         const lines = currentLines();
         if (!clientSelect.value) {
-            container.innerHTML = '<p class="text-muted mb-0">Select a client to see their pending PO lines.</p>';
+            container.innerHTML = '<p class="text-body-secondary mb-0">Select a client to see their pending PO lines.</p>';
             addBtn.disabled = true;
         } else if (!lines.length) {
             container.innerHTML = '<p class="text-warning mb-0">This client has no pending PO lines.</p>';

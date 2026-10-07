@@ -4,7 +4,7 @@
 
 @section('content')
 <x-page-header title="Add client" subtitle="Add a new client to deliver to." />
-<div class="card form-card">
+<div class="card shadow-sm form-card">
     <form method="post" action="{{ route('clients.store') }}">
         <div class="card-body">
             @csrf

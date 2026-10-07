@@ -10,7 +10,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet"
           integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.5.2/css/all.min.css" rel="stylesheet">
     <link href="{{ asset('css/admin.css') }}" rel="stylesheet">
 </head>
 <body>
@@ -22,19 +22,19 @@
     </aside>
 
     <div class="app-main">
-        <header class="app-header">
-            <button class="btn btn-outline-secondary btn-sm d-lg-none" type="button" data-bs-toggle="offcanvas"
+        <header class="app-header bg-body border-bottom shadow-sm px-3 px-md-4">
+            <button class="btn btn-outline-secondary d-lg-none" type="button" data-bs-toggle="offcanvas"
                     data-bs-target="#appSidebar" aria-controls="appSidebar" aria-label="Open navigation menu">
-                <i class="bi bi-list fs-5 m-0" aria-hidden="true"></i>
+                <i class="fa-solid fa-bars" aria-hidden="true"></i>
             </button>
-            <h2 class="header-title text-truncate">@yield('title', config('app.name'))</h2>
+            <h2 class="h5 fw-semibold mb-0 text-truncate">@yield('title', config('app.name'))</h2>
             <form method="post" action="{{ route('logout') }}" class="ms-auto">
                 @csrf
-                <button class="btn btn-primary btn-sm" type="submit" aria-label="Log out"><i class="bi bi-box-arrow-right"></i>Log out</button>
+                <button class="btn btn-primary btn-sm" type="submit" aria-label="Log out"><i class="fa-solid fa-right-from-bracket me-1" aria-hidden="true"></i>Log out</button>
             </form>
         </header>
 
-        <main id="main-content" class="app-content" tabindex="-1" role="main">
+        <main id="main-content" class="app-content p-3 p-md-4" tabindex="-1" role="main">
             @yield('content')
         </main>
     </div>

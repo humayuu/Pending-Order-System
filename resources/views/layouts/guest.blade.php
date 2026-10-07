@@ -10,17 +10,17 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet"
           integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.5.2/css/all.min.css" rel="stylesheet">
     <link href="{{ asset('css/admin.css') }}" rel="stylesheet">
 </head>
 <body>
 <a class="visually-hidden-focusable btn btn-sm btn-primary position-fixed top-0 start-0 m-2" style="z-index: 1100" href="#main-content-guest">Skip to main content</a>
 
-<main id="main-content-guest" class="auth-wrap" tabindex="-1" role="main">
+<main id="main-content-guest" class="auth-wrap bg-body-tertiary" tabindex="-1" role="main">
     <div class="auth-card">
         <div class="text-center mb-4">
-            <span class="brand-mark mb-2" style="width:3rem;height:3rem;font-size:1.5rem"><i class="bi bi-box-seam"></i></span>
-            <div class="fw-bold fs-5">{{ config('app.name') }}</div>
+            <span class="d-inline-flex align-items-center justify-content-center rounded-3 bg-primary text-white fs-3 mb-2" style="width:3.5rem;height:3.5rem"><i class="fa-solid fa-boxes-stacked"></i></span>
+            <div class="fw-bold fs-4">{{ config('app.name') }}</div>
         </div>
         @yield('content')
     </div>

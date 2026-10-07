@@ -5,7 +5,7 @@
 @section('content')
 <x-page-header title="Orders (PO batches)" subtitle="Purchase order batches and their lines.">
     <x-slot:actions>
-        <a href="{{ route('orders.create') }}" class="btn btn-primary"><i class="bi bi-plus-lg"></i>New order</a>
+        <a href="{{ route('orders.create') }}" class="btn btn-primary"><i class="fa-solid fa-plus me-1"></i>New order</a>
     </x-slot:actions>
 </x-page-header>
 
@@ -29,15 +29,15 @@
                 <tr>
                     <td class="fw-medium">#{{ $order->id }}</td>
                     <td><x-client-badge :client="$order->client" /></td>
-                    <td><span class="badge-soft badge-soft-primary">{{ $order->items_count }} {{ \Illuminate\Support\Str::plural('line', $order->items_count) }}</span></td>
-                    <td class="text-muted">{{ $order->created_at->format('M j, Y') }}</td>
+                    <td><span class="badge text-bg-primary">{{ $order->items_count }} {{ \Illuminate\Support\Str::plural('line', $order->items_count) }}</span></td>
+                    <td class="text-body-secondary">{{ $order->created_at->format('M j, Y') }}</td>
                     <td class="text-end">
-                        <a href="{{ route('orders.edit', $order) }}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-pencil"></i>Edit</a>
-                        <a href="{{ route('orders.show', $order) }}" class="btn btn-sm btn-outline-primary"><i class="bi bi-eye"></i>Open</a>
+                        <a href="{{ route('orders.edit', $order) }}" class="btn btn-sm btn-outline-secondary"><i class="fa-solid fa-pen-to-square me-1"></i>Edit</a>
+                        <a href="{{ route('orders.show', $order) }}" class="btn btn-sm btn-outline-primary"><i class="fa-solid fa-eye me-1"></i>Open</a>
                     </td>
                 </tr>
             @empty
-                <tr><td colspan="5"><x-empty-state icon="bi-receipt" message="No orders yet.">
+                <tr><td colspan="5"><x-empty-state icon="fa-file-invoice" message="No orders yet.">
                     <a href="{{ route('orders.create') }}" class="btn btn-sm btn-primary">New order</a>
                 </x-empty-state></td></tr>
             @endforelse

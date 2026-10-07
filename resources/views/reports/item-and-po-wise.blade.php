@@ -5,7 +5,7 @@
 @section('content')
 <x-page-header title="Item and PO wise report" subtitle="Pending quantity by item (rows) and PO number (columns), per client.">
     <x-slot:actions>
-        <a href="{{ route('reports.item-and-po-wise.pdf', $filters->toQuery()) }}" class="btn btn-primary"><i class="bi bi-file-earmark-pdf"></i>Download PDF</a>
+        <a href="{{ route('reports.item-and-po-wise.pdf', $filters->toQuery()) }}" class="btn btn-primary"><i class="fa-solid fa-file-pdf me-1"></i>Download PDF</a>
     </x-slot:actions>
 </x-page-header>
 
@@ -30,9 +30,9 @@
                     <tr>
                         <td>{{ $item->item_name }}</td>
                         @foreach ($block->pos as $po)
-                            <td class="text-end num">{{ $item->cells->has($po) ? number_format($item->cells[$po]) : '' }}</td>
+                            <td class="text-end">{{ $item->cells->has($po) ? number_format($item->cells[$po]) : '' }}</td>
                         @endforeach
-                        <td class="text-end num fw-semibold">{{ number_format($item->total) }}</td>
+                        <td class="text-end fw-semibold">{{ number_format($item->total) }}</td>
                     </tr>
                 @endforeach
                 </tbody>
@@ -40,6 +40,6 @@
         </div>
     </div>
 @empty
-    <div class="card"><x-empty-state icon="bi-bar-chart-line" message="No data yet." /></div>
+    <div class="card"><x-empty-state icon="fa-chart-line" message="No data yet." /></div>
 @endforelse
 @endsection

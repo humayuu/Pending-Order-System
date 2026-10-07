@@ -4,7 +4,7 @@
 
 @section('content')
 <x-page-header :title="'Edit order #'.$order->id" subtitle="Change the client, reference or notes. PO lines are not editable here." />
-<div class="card form-card">
+<div class="card shadow-sm form-card">
     <form method="post" action="{{ route('orders.update', $order) }}">
         <div class="card-body">
             @csrf
@@ -19,11 +19,11 @@
                 </select>
             </div>
             <div class="mb-3">
-                <label class="form-label" for="reference">Reference <span class="text-muted fw-normal">(optional)</span></label>
+                <label class="form-label" for="reference">Reference <span class="text-body-secondary fw-normal">(optional)</span></label>
                 <input type="text" name="reference" id="reference" class="form-control" value="{{ old('reference', $order->reference) }}">
             </div>
             <div class="mb-3">
-                <label class="form-label" for="notes">Notes <span class="text-muted fw-normal">(optional)</span></label>
+                <label class="form-label" for="notes">Notes <span class="text-body-secondary fw-normal">(optional)</span></label>
                 <textarea name="notes" id="notes" class="form-control" rows="3">{{ old('notes', $order->notes) }}</textarea>
             </div>
         </div>

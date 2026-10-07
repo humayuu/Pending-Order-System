@@ -2,18 +2,21 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\StoreOrderRequest;
+use App\Http\Requests\UpdateOrderRequest;
 use App\Models\Client;
-use App\Models\DeliveryChallan;
 use App\Models\Order;
 use App\Models\OrderItem;
+use App\Services\OrderService;
 use App\Support\StockFilters;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
 
 class OrderController extends Controller
 {
+    public function __construct(protected OrderService $orders) {}
+
     public function index(Request $request): View
     {
         $filters = StockFilters::fromRequest($request);
@@ -39,44 +42,14 @@ class OrderController extends Controller
         $clients = Client::query()->orderBy('name')->get(['id', 'name']);
         $selectedClient = $request->query('client_id');
 
-        return view('orders.create', compact('clients', 'selectedClient'));
+        $itemNames = OrderItem::query()->select('item_name')->distinct()->orderBy('item_name')->pluck('item_name');
+
+        return view('orders.create', compact('clients', 'selectedClient', 'itemNames'));
     }
 
-    public function store(Request $request): RedirectResponse
+    public function store(StoreOrderRequest $request): RedirectResponse
     {
-        $validated = $request->validate([
-            'client_id' => ['required', 'exists:clients,id'],
-            'lines' => ['required', 'array', 'min:1'],
-            'lines.*.po_number' => ['required', 'string', 'max:255'],
-            'lines.*.notes' => ['nullable', 'string'],
-            'lines.*.item_name' => ['required', 'string', 'max:255'],
-            'lines.*.quantity' => ['required', 'integer', 'min:1'],
-            'lines.*.po_pdf' => ['nullable', 'file', 'mimes:pdf', 'max:12288'],
-        ]);
-
-        DB::transaction(function () use ($validated, $request): void {
-            $order = Order::query()->create([
-                'client_id' => $validated['client_id'],
-                'reference' => null,
-                'notes' => null,
-            ]);
-
-            foreach ($validated['lines'] as $index => $line) {
-                $path = null;
-                if ($request->hasFile("lines.$index.po_pdf")) {
-                    $path = $request->file("lines.$index.po_pdf")->store('po_pdfs', 'public');
-                }
-
-                OrderItem::query()->create([
-                    'order_id' => $order->id,
-                    'item_name' => $line['item_name'],
-                    'po_number' => $line['po_number'],
-                    'notes' => $line['notes'] ?? null,
-                    'quantity' => $line['quantity'],
-                    'po_pdf_path' => $path,
-                ]);
-            }
-        });
+        $this->orders->create($request->validated());
 
         return redirect()->route('orders.index')->with('status', 'Order and PO lines saved.');
     }
@@ -97,28 +70,9 @@ class OrderController extends Controller
         return view('orders.edit', compact('order', 'clients'));
     }
 
-    public function update(Request $request, Order $order): RedirectResponse
+    public function update(UpdateOrderRequest $request, Order $order): RedirectResponse
     {
-        $validated = $request->validate([
-            'client_id' => ['required', 'exists:clients,id'],
-            'reference' => ['nullable', 'string', 'max:255'],
-            'notes' => ['nullable', 'string'],
-        ]);
-
-        if ((int) $validated['client_id'] !== (int) $order->client_id) {
-            $deliveredToOthers = DeliveryChallan::query()
-                ->where('client_id', '!=', $validated['client_id'])
-                ->whereHas('lines.orderItem', fn ($q) => $q->where('order_id', $order->id))
-                ->exists();
-
-            if ($deliveredToOthers) {
-                return back()->withInput()->withErrors([
-                    'client_id' => 'Cannot change the client: challans for another client already deliver against this order.',
-                ]);
-            }
-        }
-
-        $order->update($validated);
+        $order->update($request->validated());
 
         return redirect()->route('orders.show', $order)->with('status', 'Order updated.');
     }
