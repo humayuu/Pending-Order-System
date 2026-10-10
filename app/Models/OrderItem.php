@@ -18,6 +18,7 @@ class OrderItem extends Model
         'notes',
         'quantity',
         'po_pdf_path',
+        'image_path',
     ];
 
     protected $casts = [

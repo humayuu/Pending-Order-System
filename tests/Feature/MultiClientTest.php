@@ -39,11 +39,11 @@ class MultiClientTest extends TestCase
     public function test_order_requires_valid_client_and_saves_it(): void
     {
         $client = Client::factory()->create();
-        $line = ['po_number' => 'P1', 'item_name' => 'Bolt', 'quantity' => 5];
+        $line = ['item_name' => 'Bolt', 'quantity' => 5];
 
-        $this->login()->post('/orders', ['lines' => [$line]])->assertSessionHasErrors('client_id');
-        $this->post('/orders', ['client_id' => 999, 'lines' => [$line]])->assertSessionHasErrors('client_id');
-        $this->post('/orders', ['client_id' => $client->id, 'lines' => [$line]])->assertRedirect('/orders');
+        $this->login()->post('/orders', ['po_number' => 'P1', 'lines' => [$line]])->assertSessionHasErrors('client_id');
+        $this->post('/orders', ['client_id' => 999, 'po_number' => 'P1', 'lines' => [$line]])->assertSessionHasErrors('client_id');
+        $this->post('/orders', ['client_id' => $client->id, 'po_number' => 'P1', 'lines' => [$line]])->assertRedirect('/orders');
 
         $this->assertSame($client->id, Order::first()->client_id);
     }

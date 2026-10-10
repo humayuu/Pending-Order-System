@@ -62,7 +62,12 @@
                         <div class="d-sm-none small text-body-secondary mt-1">Delivered: {{ $delivered }}</div>
                     </td>
                     <td class="small text-body-secondary text-break d-none d-md-table-cell">{{ $item->notes ?: '—' }}</td>
-                    <td class="fw-medium">{{ $item->item_name }}</td>
+                    <td class="fw-medium">
+                        @if ($item->image_path)
+                            <a href="{{ asset('storage/'.$item->image_path) }}" target="_blank" rel="noopener noreferrer"><img src="{{ asset('storage/'.$item->image_path) }}" alt="{{ $item->item_name }}" class="rounded border me-2" style="height:40px;width:40px;object-fit:cover"></a>
+                        @endif
+                        {{ $item->item_name }}
+                    </td>
                     <td class="text-end">{{ $item->quantity }}</td>
                     <td class="text-end d-none d-sm-table-cell">{{ $delivered }}</td>
                     <td class="text-end"><x-status-badge :pending="$pending" /></td>

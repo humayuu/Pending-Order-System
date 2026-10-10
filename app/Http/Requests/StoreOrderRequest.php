@@ -16,12 +16,12 @@ class StoreOrderRequest extends FormRequest
     {
         return [
             'client_id' => ['required', 'exists:clients,id'],
+            'po_number' => ['required', 'string', 'max:255'],
+            'notes' => ['nullable', 'string'],
             'lines' => ['required', 'array', 'min:1'],
-            'lines.*.po_number' => ['required', 'string', 'max:255'],
-            'lines.*.notes' => ['nullable', 'string'],
             'lines.*.item_name' => ['required', 'string', 'max:255'],
             'lines.*.quantity' => ['required', 'integer', 'min:1'],
-            'lines.*.po_pdf' => ['nullable', 'file', 'mimes:pdf', 'max:12288'],
+            'lines.*.file' => ['nullable', 'file', 'mimes:pdf,jpg,jpeg,png,webp', 'max:12288'],
         ];
     }
 }

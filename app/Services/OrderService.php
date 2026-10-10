@@ -12,7 +12,7 @@ class OrderService
     /**
      * Create an order with its PO lines (and optional PDFs) atomically.
      *
-     * @param  array{client_id: int|string, lines: array<int, array<string, mixed>>}  $data
+     * @param  array{client_id: int|string, po_number: string, notes?: string|null, lines: array<int, array<string, mixed>>}  $data
      */
     public function create(array $data): Order
     {
@@ -24,15 +24,17 @@ class OrderService
             ]);
 
             foreach ($data['lines'] as $line) {
-                $file = $line['po_pdf'] ?? null;
+                $file = $line['file'] ?? null;
+                $isPdf = $file?->getMimeType() === 'application/pdf';
 
                 OrderItem::query()->create([
                     'order_id' => $order->id,
                     'item_name' => $line['item_name'],
-                    'po_number' => $line['po_number'],
-                    'notes' => $line['notes'] ?? null,
+                    'po_number' => $data['po_number'],
+                    'notes' => $data['notes'] ?? null,
                     'quantity' => $line['quantity'],
-                    'po_pdf_path' => $file?->store('po_pdfs', 'public'),
+                    'po_pdf_path' => $isPdf ? $file->store('po_pdfs', 'public') : null,
+                    'image_path' => $file && ! $isPdf ? $file->store('po_images', 'public') : null,
                 ]);
             }
 

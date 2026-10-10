@@ -31,17 +31,35 @@ class FormRequestValidationTest extends TestCase
             ->assertSessionDoesntHaveErrors()->assertRedirect('/clients');
     }
 
+    public function test_order_store_saves_line_image_and_rejects_non_images(): void
+    {
+        Storage::fake('public');
+        $this->actingAs(User::factory()->create());
+        $client = Client::factory()->create();
+        $line = ['item_name' => 'Bolt', 'quantity' => 5];
+
+        $this->post('/orders', ['client_id' => $client->id, 'po_number' => 'P1', 'lines' => [$line + ['file' => UploadedFile::fake()->create('x.exe', 10, 'application/octet-stream')]]])
+            ->assertSessionHasErrors('lines.0.file');
+
+        $this->post('/orders', ['client_id' => $client->id, 'po_number' => 'P1', 'lines' => [$line + ['file' => UploadedFile::fake()->image('bolt.jpg')]]])
+            ->assertSessionDoesntHaveErrors();
+
+        $path = OrderItem::query()->firstOrFail()->image_path;
+        $this->assertNotNull($path);
+        Storage::disk('public')->assertExists($path);
+    }
+
     public function test_order_store_validates_lines_and_saves_pdf(): void
     {
         Storage::fake('public');
         $this->actingAs(User::factory()->create());
         $client = Client::factory()->create();
 
-        $this->post('/orders', ['client_id' => $client->id, 'lines' => []])->assertSessionHasErrors('lines');
+        $this->post('/orders', ['client_id' => $client->id, 'po_number' => 'P1', 'lines' => []])->assertSessionHasErrors('lines');
 
-        $this->post('/orders', ['client_id' => $client->id, 'lines' => [[
-            'po_number' => 'P1', 'item_name' => 'Bolt', 'quantity' => 3,
-            'po_pdf' => UploadedFile::fake()->create('po.pdf', 10, 'application/pdf'),
+        $this->post('/orders', ['client_id' => $client->id, 'po_number' => 'P1', 'lines' => [[
+            'item_name' => 'Bolt', 'quantity' => 3,
+            'file' => UploadedFile::fake()->create('po.pdf', 10, 'application/pdf'),
         ]]])->assertRedirect('/orders');
 
         $this->assertNotNull(OrderItem::first()->po_pdf_path);
