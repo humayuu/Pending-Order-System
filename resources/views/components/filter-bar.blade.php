@@ -6,6 +6,7 @@
     'po' => false,
     'status' => false,
     'unassigned' => false,
+    'searchable' => false,
 ])
 <form method="get" action="{{ $action }}" class="card shadow-sm mb-3 no-print" aria-label="Filters">
     <div class="card-body py-3">
@@ -64,3 +65,24 @@
         </div>
     </div>
 </form>
+
+@if ($searchable)
+    @once
+        @push('scripts')
+            <link href="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/css/tom-select.bootstrap5.min.css" rel="stylesheet">
+            <script src="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/js/tom-select.complete.min.js"></script>
+            <script>
+                new TomSelect('#f_client', {
+                    maxItems: 1,
+                    create: false,
+                    allowEmptyOption: true,
+                    selectOnTab: true,
+                    placeholder: 'Search client…',
+                    render: {
+                        no_results: () => '<div class="no-results">No client found.</div>',
+                    },
+                });
+            </script>
+        @endpush
+    @endonce
+@endif

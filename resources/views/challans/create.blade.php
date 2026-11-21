@@ -19,7 +19,7 @@
         <div class="card-header">Challan details</div>
         <div class="card-body">
             <div class="row g-3">
-                <div class="col-12 col-lg-6">
+                <div class="col-12 col-lg-4">
                     <label class="form-label" for="client_id">Client <span class="text-danger">*</span></label>
                     <select name="client_id" id="client_id" class="form-select" required>
                         <option value="">Select client…</option>
@@ -29,11 +29,19 @@
                     </select>
                 </div>
                 <div class="col-12 col-sm-6 col-lg-3">
+                    <label class="form-label" for="challan_number">DC No. <span class="text-danger">*</span></label>
+                    <input type="text" name="challan_number" id="challan_number" maxlength="50" required
+                           class="form-control font-monospace @error('challan_number') is-invalid @enderror"
+                           value="{{ old('challan_number') }}" placeholder="e.g. 1045">
+                    @error('challan_number')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                    <div class="form-text">Must be unique.</div>
+                </div>
+                <div class="col-12 col-sm-6 col-lg-2">
                     <label class="form-label" for="issued_on">Issue date <span class="text-danger">*</span></label>
                     <input type="date" name="issued_on" id="issued_on" class="form-control" required
                            value="{{ old('issued_on', now()->toDateString()) }}">
                 </div>
-                <div class="col-12 col-sm-6 col-lg-3">
+                <div class="col-12 col-lg-3">
                     <label class="form-label" for="vehicle_no">Vehicle no. <span class="text-body-secondary fw-normal">(optional)</span></label>
                     <input type="text" name="vehicle_no" id="vehicle_no" class="form-control" value="{{ old('vehicle_no') }}">
                 </div>
@@ -74,6 +82,15 @@
     const addBtn = document.getElementById('addChallanLine');
 
     const clientSelect = document.getElementById('client_id');
+    new TomSelect(clientSelect, {
+        maxItems: 1,
+        create: false,
+        selectOnTab: true,
+        placeholder: 'Search client…',
+        render: {
+            no_results: () => '<div class="no-results">No client found. Add it from the Clients page first.</div>',
+        },
+    });
 
     function currentLines() {
         const cid = clientSelect.value;
@@ -110,7 +127,7 @@
                 <div class="col-12 col-lg-4">
                     <label class="form-label">Quantity</label>
                     <div class="input-group">
-                        <input type="number" name="lines[${index}][quantity]" class="form-control qty-input" min="1" value="1" required>
+                        <input type="number" name="lines[${index}][quantity]" class="form-control qty-input" min="1" placeholder="Qty" required>
                         <span class="input-group-text pending-hint">of &mdash;</span>
                     </div>
                 </div>

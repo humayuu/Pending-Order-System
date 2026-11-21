@@ -22,7 +22,7 @@ class OrderController extends Controller
         $filters = StockFilters::fromRequest($request);
 
         $orders = Order::query()
-            ->with('client')
+            ->with(['client', 'items:id,order_id,po_number'])
             ->withCount('items')
             ->when($filters->unassigned, fn ($q) => $q->unassigned())
             ->when($filters->clientId, fn ($q) => $q->forClient($filters->clientId))
@@ -57,10 +57,14 @@ class OrderController extends Controller
     public function show(Order $order): View
     {
         $order->load(['client', 'items' => function ($q) {
-            $q->withSum('deliveryChallanLines as delivered_sum', 'quantity');
+            $q->withSum('deliveryChallanLines as delivered_sum', 'quantity')
+                ->with('deliveryChallanLines.deliveryChallan:id,challan_number,issued_on,vehicle_no');
         }]);
 
-        return view('orders.show', compact('order'));
+        $poNumbers = $order->items->pluck('po_number')->unique()->implode(', ');
+        $pageTitle = $poNumbers !== '' ? 'PO: '.$poNumbers : 'Order';
+
+        return view('orders.show', compact('order', 'pageTitle'));
     }
 
     public function edit(Order $order): View

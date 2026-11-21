@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('title', 'Order #'.$order->id)
+@section('title', $pageTitle)
 
 @section('content')
 @php
@@ -8,8 +8,11 @@
     $totalDelivered = $order->items->sum(fn ($i) => (int) ($i->delivered_sum ?? 0));
     $totalPending = $order->items->sum(fn ($i) => max(0, $i->quantity - (int) ($i->delivered_sum ?? 0)));
 @endphp
-<x-page-header :title="'Order #'.$order->id" :subtitle="($order->client ? $order->client->name.' · ' : '').'Created '.$order->created_at->format('M j, Y')">
+<x-page-header :title="$pageTitle" :subtitle="($order->client ? $order->client->name.' · ' : '').'Created '.$order->created_at->format('M j, Y')">
     <x-slot:actions>
+        @if ($order->items->isNotEmpty())
+            <a href="{{ route('orders.po-report', $order) }}" class="btn btn-outline-primary"><i class="fa-solid fa-file-pdf me-1"></i>PDF report</a>
+        @endif
         <a href="{{ route('orders.edit', $order) }}" class="btn btn-outline-secondary"><i class="fa-solid fa-pen-to-square me-1"></i>Edit</a>
         <a href="{{ route('orders.index') }}" class="btn btn-outline-secondary"><i class="fa-solid fa-arrow-left me-1"></i>Back to list</a>
     </x-slot:actions>
@@ -76,6 +79,37 @@
                             <a href="{{ asset('storage/'.$item->po_pdf_path) }}" target="_blank" rel="noopener noreferrer" class="btn btn-sm btn-outline-primary"><i class="fa-solid fa-file-pdf me-1"></i>PDF</a>
                         @else
                             <span class="text-body-secondary">—</span>
+                        @endif
+                    </td>
+                </tr>
+                <tr class="table-light">
+                    <td colspan="7" class="pt-1 pb-3">
+                        @php($deliveries = $item->deliveryChallanLines->sortBy([['deliveryChallan.issued_on', 'asc'], ['delivery_challan_id', 'asc']]))
+                        <div class="small fw-semibold text-body-secondary mb-1"><i class="fa-solid fa-truck me-1"></i>Delivery history &middot; PO {{ $item->po_number }}</div>
+                        @if ($deliveries->isEmpty())
+                            <div class="small text-body-secondary">No deliveries yet.</div>
+                        @else
+                            <table class="table table-sm table-borderless mb-1 small bg-transparent">
+                                <thead>
+                                <tr class="text-body-secondary">
+                                    <th scope="col" class="fw-medium">DC No.</th>
+                                    <th scope="col" class="fw-medium">Date</th>
+                                    <th scope="col" class="fw-medium d-none d-sm-table-cell">Vehicle</th>
+                                    <th scope="col" class="fw-medium text-end">Qty</th>
+                                </tr>
+                                </thead>
+                                <tbody>
+                                @foreach ($deliveries as $line)
+                                    <tr>
+                                        <td><a href="{{ route('challans.show', $line->deliveryChallan) }}" class="badge text-bg-light border font-monospace text-decoration-none">{{ $line->deliveryChallan->challan_number }}</a></td>
+                                        <td class="text-nowrap">{{ $line->deliveryChallan->issued_on->format('M j, Y') }}</td>
+                                        <td class="d-none d-sm-table-cell">{{ $line->deliveryChallan->vehicle_no ?: '—' }}</td>
+                                        <td class="text-end fw-semibold">{{ $line->quantity }}</td>
+                                    </tr>
+                                @endforeach
+                                </tbody>
+                            </table>
+                            <div class="small text-body-secondary">Delivered {{ $delivered }} of {{ $item->quantity }} &middot; Pending {{ $pending }}</div>
                         @endif
                     </td>
                 </tr>

@@ -7,6 +7,11 @@ use Illuminate\Validation\Rules\Unique;
 
 class UpdateClientRequest extends StoreClientRequest
 {
+    protected function fillsMissingFields(): bool
+    {
+        return false;
+    }
+
     protected function uniqueName(): Unique
     {
         return Rule::unique('clients', 'name')->ignore($this->route('client'));

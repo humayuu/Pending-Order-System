@@ -9,7 +9,7 @@
     </x-slot:actions>
 </x-page-header>
 
-<x-filter-bar :action="route('orders.index')" :clients="$clients" :filters="$filters" :unassigned="true" />
+<x-filter-bar :action="route('orders.index')" :clients="$clients" :filters="$filters" :unassigned="true" :searchable="true" />
 
 <div class="card">
     <div class="table-responsive">
@@ -17,7 +17,7 @@
             <caption class="visually-hidden">Purchase orders with line counts and dates</caption>
             <thead>
             <tr>
-                <th scope="col">ID</th>
+                <th scope="col">PO number</th>
                 <th scope="col">Client</th>
                 <th scope="col">Lines</th>
                 <th scope="col">Created</th>
@@ -27,7 +27,7 @@
             <tbody>
             @forelse ($orders as $order)
                 <tr>
-                    <td class="fw-medium">#{{ $order->id }}</td>
+                    <td class="fw-medium">{{ $order->items->pluck('po_number')->unique()->sort(SORT_NATURAL)->implode(', ') ?: '—' }}</td>
                     <td><x-client-badge :client="$order->client" /></td>
                     <td><span class="badge text-bg-primary">{{ $order->items_count }} {{ \Illuminate\Support\Str::plural('line', $order->items_count) }}</span></td>
                     <td class="text-body-secondary">{{ $order->created_at->format('M j, Y') }}</td>

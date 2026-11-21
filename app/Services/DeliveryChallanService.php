@@ -2,9 +2,11 @@
 
 namespace App\Services;
 
+use App\Exceptions\DuplicateChallanNumberException;
 use App\Models\DeliveryChallan;
 use App\Models\DeliveryChallanLine;
 use App\Models\OrderItem;
+use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -66,13 +68,18 @@ class DeliveryChallanService
                 $this->assertDeliverable($items->get($line['order_item_id']), (int) $data['client_id'], (int) $line['quantity']);
             }
 
-            $challan = DeliveryChallan::query()->create([
-                'client_id' => $data['client_id'],
-                'challan_number' => $this->nextChallanNumber(),
-                'issued_on' => $data['issued_on'],
-                'vehicle_no' => $data['vehicle_no'] ?? null,
-                'remarks' => $data['remarks'] ?? null,
-            ]);
+            try {
+                $challan = DeliveryChallan::query()->create([
+                    'client_id' => $data['client_id'],
+                    'challan_number' => $data['challan_number'],
+                    'issued_on' => $data['issued_on'],
+                    'vehicle_no' => $data['vehicle_no'] ?? null,
+                    'remarks' => $data['remarks'] ?? null,
+                ]);
+            } catch (UniqueConstraintViolationException) {
+                // Another challan took this number between validation and insert.
+                throw new DuplicateChallanNumberException("DC number {$data['challan_number']} already exists.");
+            }
 
             foreach ($data['lines'] as $line) {
                 DeliveryChallanLine::query()->create([
@@ -104,18 +111,5 @@ class DeliveryChallanService
                 "Quantity exceeds pending for {$item->item_name} (PO {$item->po_number}). You entered {$quantity}, pending is {$pending}."
             );
         }
-    }
-
-    private function nextChallanNumber(): string
-    {
-        $prefix = 'DC-'.now()->format('Y').'-';
-        $last = DeliveryChallan::query()
-            ->where('challan_number', 'like', $prefix.'%')
-            ->orderByDesc('id')
-            ->value('challan_number');
-
-        $seq = $last && Str::startsWith($last, $prefix) ? (int) Str::after($last, $prefix) + 1 : 1;
-
-        return $prefix.str_pad((string) $seq, 4, '0', STR_PAD_LEFT);
     }
 }

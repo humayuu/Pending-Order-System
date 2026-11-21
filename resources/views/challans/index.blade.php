@@ -9,7 +9,7 @@
     </x-slot:actions>
 </x-page-header>
 
-<x-filter-bar :action="route('challans.index')" :clients="$clients" :filters="$filters" />
+<x-filter-bar :action="route('challans.index')" :clients="$clients" :filters="$filters" :searchable="true" />
 
 <div class="card">
     <div class="table-responsive">

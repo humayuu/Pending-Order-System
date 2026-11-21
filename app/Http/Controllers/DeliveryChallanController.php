@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Exceptions\DuplicateChallanNumberException;
 use App\Http\Requests\StoreDeliveryChallanRequest;
 use App\Models\Client;
 use App\Models\DeliveryChallan;
@@ -51,6 +52,8 @@ class DeliveryChallanController extends Controller
     {
         try {
             $this->challans->create($request->validated());
+        } catch (DuplicateChallanNumberException $e) {
+            return back()->withInput()->withErrors(['challan_number' => $e->getMessage()]);
         } catch (RuntimeException $e) {
             return back()->withInput()->withErrors(['lines' => $e->getMessage()]);
         }

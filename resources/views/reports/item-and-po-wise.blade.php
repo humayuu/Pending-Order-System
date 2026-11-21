@@ -9,7 +9,7 @@
     </x-slot:actions>
 </x-page-header>
 
-<x-filter-bar :action="route('reports.item-and-po-wise')" :clients="$clients" :filters="$filters" :orders="$orders" :po="true" :status="true" />
+<x-filter-bar :action="route('reports.item-and-po-wise')" :clients="$clients" :filters="$filters" :orders="$orders" :po="true" :status="true" :searchable="true" />
 
 @forelse ($blocks as $block)
     <div class="card mb-4">

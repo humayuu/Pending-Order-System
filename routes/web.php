@@ -26,6 +26,7 @@ Route::middleware('auth')->group(function (): void {
 
     Route::resource('clients', ClientController::class)->except(['show']);
 
+    Route::get('orders/{order}/po-report', [ReportController::class, 'poReportPdf'])->name('orders.po-report');
     Route::resource('orders', OrderController::class)->only(['index', 'create', 'store', 'show', 'edit', 'update']);
 
     Route::resource('challans', DeliveryChallanController::class)->only(['index', 'create', 'store', 'show']);

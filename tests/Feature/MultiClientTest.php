@@ -72,7 +72,7 @@ class MultiClientTest extends TestCase
         $orphan = OrderItem::factory()->create(['order_id' => Order::factory()->unassigned()->create()->id, 'quantity' => 5]);
         $aItem = $this->item($a, 'PA');
 
-        $payload = fn (OrderItem $i) => ['client_id' => $a->id, 'issued_on' => '2026-10-01', 'lines' => [['order_item_id' => $i->id, 'quantity' => 1]]];
+        $payload = fn (OrderItem $i, string $dc = 'DC-1') => ['client_id' => $a->id, 'challan_number' => $dc, 'issued_on' => '2026-10-01', 'lines' => [['order_item_id' => $i->id, 'quantity' => 1]]];
 
         $this->login()->post('/challans', $payload($bItem))->assertSessionHasErrors('lines');
         $this->post('/challans', $payload($orphan))->assertSessionHasErrors('lines');
@@ -81,7 +81,53 @@ class MultiClientTest extends TestCase
         $this->post('/challans', $payload($aItem))->assertRedirect('/challans');
         $this->assertSame(1, DeliveryChallan::count());
 
-        $this->post('/challans', ['lines' => [['order_item_id' => $aItem->id, 'quantity' => 99]]] + $payload($aItem))->assertSessionHasErrors('lines');
+        $this->post('/challans', ['lines' => [['order_item_id' => $aItem->id, 'quantity' => 99]]] + $payload($aItem, 'DC-2'))->assertSessionHasErrors('lines');
+    }
+
+    public function test_challan_number_is_manual_required_and_unique(): void
+    {
+        $a = Client::factory()->create();
+        $item = $this->item($a, 'PA');
+        $payload = fn (?string $dc) => ['client_id' => $a->id, 'challan_number' => $dc, 'issued_on' => '2026-10-01', 'lines' => [['order_item_id' => $item->id, 'quantity' => 1]]];
+
+        $this->login()->post('/challans', $payload(null))->assertSessionHasErrors('challan_number');
+        $this->post('/challans', $payload(' DC-100 '))->assertRedirect('/challans');
+        $this->assertSame('DC-100', DeliveryChallan::first()->challan_number);
+
+        foreach (['DC-100', ' DC-100 ', 'dc-100'] as $dup) {
+            $this->post('/challans', $payload($dup))->assertSessionHasErrors('challan_number');
+        }
+        $this->assertSame(1, DeliveryChallan::count());
+    }
+
+    public function test_create_form_starts_with_empty_dc_number_and_quantity(): void
+    {
+        DeliveryChallan::factory()->create(['client_id' => Client::factory()->create()->id, 'challan_number' => 'DC-2026-0001']);
+
+        $html = $this->login()->get('/challans/create')->assertOk()->getContent();
+
+        $this->assertMatchesRegularExpression('/name="challan_number"[^>]*value=""/', $html);
+        $this->assertStringNotContainsString('DC-2026-0002', $html);
+        $this->assertDoesNotMatchRegularExpression('/qty-input"[^>]*value=/', $html);
+    }
+
+    public function test_order_show_lists_deliveries_per_po_line(): void
+    {
+        $a = Client::factory()->create();
+        $item = $this->item($a, 'PO-55', 10, 'Washer');
+        $idle = OrderItem::factory()->create(['order_id' => $item->order_id, 'po_number' => 'PO-56', 'quantity' => 4]);
+
+        $first = DeliveryChallan::factory()->create(['client_id' => $a->id, 'challan_number' => 'DC-A1', 'issued_on' => '2026-10-01']);
+        $second = DeliveryChallan::factory()->create(['client_id' => $a->id, 'challan_number' => 'DC-B2', 'issued_on' => '2026-10-05']);
+        DeliveryChallanLine::create(['delivery_challan_id' => $second->id, 'order_item_id' => $item->id, 'quantity' => 2]);
+        DeliveryChallanLine::create(['delivery_challan_id' => $first->id, 'order_item_id' => $item->id, 'quantity' => 3]);
+
+        $this->login()->get('/orders/'.$item->order_id)
+            ->assertOk()
+            ->assertSeeInOrder(['PO-55', 'DC-A1', '3', 'DC-B2', '2', 'Delivered 5 of 10', 'Pending 5', 'PO-56', 'No deliveries yet.'])
+            ->assertSee(route('challans.show', $first))
+            ->assertSee('PO: PO-55, PO-56')
+            ->assertDontSee('Order #');
     }
 
     public function test_challan_create_payload_is_client_tagged_and_skips_unassigned(): void
@@ -166,6 +212,36 @@ class MultiClientTest extends TestCase
         }
     }
 
+    public function test_item_and_po_wise_pdf_is_named_after_client_and_status(): void
+    {
+        $paul = Client::factory()->create(['name' => 'Paul Brooks']);
+        $odd = Client::factory()->create(['name' => 'A/B: Co']);
+        $this->item($paul, 'P1');
+        $this->login();
+
+        $name = fn (string $qs) => $this->get('/reports/item-and-po-wise/pdf'.$qs)->assertOk()->headers->get('content-disposition');
+
+        $this->assertStringContainsString('filename="Paul Brooks-Pending.pdf"', $name('?client_id='.$paul->id));
+        $this->assertStringContainsString('filename="Paul Brooks-Completed.pdf"', $name('?client_id='.$paul->id.'&status=completed'));
+        $this->assertStringContainsString('filename="All Clients-Pending.pdf"', $name(''));
+        $this->assertStringContainsString('filename="A B Co-Pending.pdf"', $name('?client_id='.$odd->id));
+    }
+
+    public function test_order_report_pdf_has_one_button_and_downloads(): void
+    {
+        $a = Client::factory()->create();
+        $item = $this->item($a, 'PO-55');
+        OrderItem::factory()->create(['order_id' => $item->order_id, 'po_number' => 'PO-55']);
+        $this->deliver($a, $item, 4);
+        $this->login();
+
+        $url = route('orders.po-report', $item->order_id);
+        $this->get($url)->assertOk()->assertHeader('content-type', 'application/pdf');
+        $this->assertSame(1, substr_count($this->get('/orders/'.$item->order_id)->getContent(), $url));
+
+        $this->get(route('orders.po-report', Order::factory()->create(['client_id' => $a->id])))->assertNotFound();
+    }
+
     public function test_client_delete_blocked_when_in_use(): void
     {
         $withOrder = Client::factory()->create();
@@ -213,7 +289,10 @@ class MultiClientTest extends TestCase
         Order::factory()->unassigned()->create();
         $this->login();
 
-        $this->get('/orders')->assertOk();
+        $this->get('/orders')->assertOk()->assertSee("new TomSelect('#f_client'", false);
+        $this->get('/challans')->assertOk()->assertSee("new TomSelect('#f_client'", false);
+        $this->get('/challans/create')->assertOk()->assertSee('new TomSelect(clientSelect', false);
+        $this->get('/reports/item-and-po-wise')->assertOk()->assertSee("new TomSelect('#f_client'", false);
         $this->get('/orders?client_id='.$a->id)->assertViewHas('orders', fn ($o) => $o->total() === 1);
         $this->get('/orders?client_id=unassigned')->assertViewHas('orders', fn ($o) => $o->total() === 1);
         $this->get('/orders/create')->assertOk();
@@ -222,6 +301,22 @@ class MultiClientTest extends TestCase
         $this->get('/challans?client_id='.$a->id.'&from=2026-01-01')->assertOk();
         $this->get('/reports')->assertRedirect(route('reports.item-and-po-wise'));
         $this->get('/reports/item-and-po-wise')->assertOk();
+    }
+
+    public function test_orders_list_shows_distinct_po_numbers_instead_of_id(): void
+    {
+        $client = Client::factory()->create();
+        $item = $this->item($client, 'PO-777');
+        OrderItem::factory()->create(['order_id' => $item->order_id, 'po_number' => 'PO-777']);
+        OrderItem::factory()->create(['order_id' => $item->order_id, 'po_number' => 'PO-888']);
+        Order::factory()->create(['client_id' => $client->id]);
+
+        $this->login()->get('/orders')
+            ->assertOk()
+            ->assertSee('PO number')
+            ->assertSee('PO-777, PO-888')
+            ->assertSee('—')
+            ->assertDontSee('#'.$item->order_id.'<', false);
     }
 
     public function test_client_name_must_be_unique(): void

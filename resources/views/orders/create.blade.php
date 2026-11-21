@@ -3,7 +3,7 @@
 @section('title', 'New order')
 
 @section('content')
-<x-page-header title="New order" subtitle="Enter the PO number once, then add item lines: item name, quantity and file. Notes are entered once too." />
+<x-page-header title="New order" subtitle="Enter the PO number, notes and PO file once, then add item lines with item name and quantity." />
 
 <form method="post" action="{{ route('orders.store') }}" enctype="multipart/form-data" id="orderForm">
     @csrf
@@ -30,6 +30,12 @@
                     <label class="form-label" for="notes">Notes <span class="text-body-secondary fw-normal">(optional, applies to all lines)</span></label>
                     <textarea name="notes" id="notes" rows="1" class="form-control @error('notes') is-invalid @enderror" placeholder="Order notes">{{ old('notes') }}</textarea>
                     @error('notes')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                </div>
+                <div class="col-12">
+                    <label class="form-label" for="po_file">PO file <span class="text-body-secondary fw-normal">(optional: PDF or image, max 12 MB, applies to all lines)</span></label>
+                    <input type="file" name="po_file" id="po_file" class="form-control @error('po_file') is-invalid @enderror" accept="application/pdf,image/jpeg,image/png,image/webp">
+                    @error('po_file')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                    <img id="po_file_preview" class="mt-2 rounded border d-none" alt="Selected image preview" style="max-height:96px">
                 </div>
             </div>
         </div>
@@ -59,6 +65,16 @@
     const addBtn = document.getElementById('addLine');
     const itemNames = @json($itemNames);
 
+    new TomSelect('#client_id', {
+        maxItems: 1,
+        create: false,
+        selectOnTab: true,
+        placeholder: 'Search client…',
+        render: {
+            no_results: () => '<div class="no-results">No client found. Add it from the Clients page first.</div>',
+        },
+    });
+
     function setupItemSelect(row) {
         const select = row.querySelector('.item-select');
         new TomSelect(select, {
@@ -79,24 +95,17 @@
     function lineTemplate(index) {
         return `
         <div class="border rounded-3 bg-body-tertiary p-3 mb-3 line-row" data-index="${index}">
-            <div class="row g-2">
-                <div class="col-12 col-md-8 col-xl-6">
+            <div class="row g-2 align-items-end">
+                <div class="col-12 col-md-7 col-xl-6">
                     <label class="form-label">Item name</label>
                     <select name="lines[${index}][item_name]" class="item-select" required aria-label="Item name"></select>
                 </div>
-                <div class="col-12 col-md-6 col-xl-2">
+                <div class="col-8 col-md-3 col-xl-2">
                     <label class="form-label">Quantity</label>
                     <input type="number" name="lines[${index}][quantity]" class="form-control" min="1" value="1" required>
                 </div>
-            </div>
-            <div class="row g-2 mt-1 align-items-end">
-                <div class="col-12 col-lg-10">
-                    <label class="form-label">PO file <span class="text-body-secondary fw-normal">(optional: PDF or image, max 12 MB)</span></label>
-                    <input type="file" name="lines[${index}][file]" class="form-control form-control-sm line-image" accept="application/pdf,image/jpeg,image/png,image/webp">
-                    <img class="line-image-preview mt-2 rounded border d-none" alt="Selected image preview" style="max-height:96px">
-                </div>
-                <div class="col-12 col-lg-2 d-grid d-lg-flex justify-content-lg-end">
-                    <button type="button" class="btn btn-outline-danger btn-sm remove-line" title="Remove line" aria-label="Remove this order line">Remove</button>
+                <div class="col-4 col-md-2 col-xl-4 d-grid d-md-flex justify-content-md-end">
+                    <button type="button" class="btn btn-outline-danger remove-line" title="Remove line" aria-label="Remove this order line">Remove</button>
                 </div>
             </div>
         </div>`;
@@ -136,9 +145,8 @@
         });
     }
 
-    container.addEventListener('change', (e) => {
-        if (!e.target.classList.contains('line-image')) return;
-        const preview = e.target.closest('.line-row').querySelector('.line-image-preview');
+    document.getElementById('po_file').addEventListener('change', (e) => {
+        const preview = document.getElementById('po_file_preview');
         const file = e.target.files[0];
         const isImage = file && file.type.startsWith('image/');
         if (preview.src.startsWith('blob:')) URL.revokeObjectURL(preview.src);
